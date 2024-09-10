@@ -54,7 +54,7 @@ def get_category(row, keywords=[], logic='AND'):
         return 'non-significant'
 
 # Function to update the plot
-def update_plot(keywords=[], logic='AND', width=800, height=600, interactive=True):
+def update_plot(keywords=[], logic='AND', width='100%', height=800, interactive=True):
     df['category'] = df.apply(get_category, axis=1, keywords=keywords, logic=logic)
     palette = {'keyword_match': '#32CD32', 'upregulated': '#FF6347', 'downregulated': '#1E90FF', 'non-significant': '#A9A9A9'}
     fig = go.Figure()
@@ -67,19 +67,19 @@ def update_plot(keywords=[], logic='AND', width=800, height=600, interactive=Tru
     upregulated_df = df[df['category'] == 'upregulated']
     fig.add_trace(go.Scatter(x=upregulated_df['GSVA_score'], y=upregulated_df['-log10(adj.P.Val)'], mode='markers',
                              marker=dict(size=8, color=palette['upregulated'], opacity=0.8, line=dict(width=0.5, color='black')),
-                             text=[name for name in upregulated_df.index], hoverinfo='text', name='Upregulated'))
+                             text=[f'<span style="color:{palette["upregulated"]};">{name}</span>' for name in upregulated_df.index], hoverinfo='text', name='Upregulated'))
 
     downregulated_df = df[df['category'] == 'downregulated']
     fig.add_trace(go.Scatter(x=downregulated_df['GSVA_score'], y=downregulated_df['-log10(adj.P.Val)'], mode='markers',
                              marker=dict(size=8, color=palette['downregulated'], opacity=0.8, line=dict(width=0.5, color='black')),
-                             text=[name for name in downregulated_df.index], hoverinfo='text', name='Downregulated'))
+                             text=[f'<span style="color:{palette["downregulated"]};">{name}</span>' for name in downregulated_df.index], hoverinfo='text', name='Downregulated'))
     
     keyword_df = df[df['category'] == 'keyword_match'].sort_values('P.Value')
     
     if interactive:
         fig.add_trace(go.Scatter(x=keyword_df['GSVA_score'], y=keyword_df['-log10(adj.P.Val)'], mode='markers',
                                  marker=dict(size=15, color=palette['keyword_match'], opacity=0.8, line=dict(width=0.5, color='black')),
-                                 text=[name for name in keyword_df.index], hoverinfo='text', name='Keyword Matched Pathways'))
+                                 text=[f'<span style="color:{palette["keyword_match"]};">{name}</span>' for name in keyword_df.index], hoverinfo='text', name='Keyword Matched Pathways'))
     else:
         for i, (index, row) in enumerate(keyword_df.iterrows()):
             fig.add_trace(go.Scatter(x=[row['GSVA_score']], y=[row['-log10(adj.P.Val)']], mode='text+markers',
@@ -88,7 +88,7 @@ def update_plot(keywords=[], logic='AND', width=800, height=600, interactive=Tru
     
     fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(255,255,255,1)', title='Interactive Volcano Plot',
                       xaxis_title='GSVA Score', yaxis_title='-log10(adj.P.Val)', title_font_size=18, width=width, height=height,
-                      legend_title_text='Pathway Categories')
+                      legend_title_text='Pathway Categories', autosize=True)
     
     return fig, keyword_df
 
@@ -98,11 +98,11 @@ if df is not None:
     keywords = [st.sidebar.text_input(f'Keyword {i+1}') for i in range(num_keywords)]
     logic = st.sidebar.selectbox('Logic', ['AND', 'OR'])
     keywords = [kw for kw in keywords if kw.strip() != '']
-    fig_width = st.sidebar.slider('Figure Width', min_value=400, max_value=1200, value=800, step=50)
-    fig_height = st.sidebar.slider('Figure Height', min_value=400, max_value=1000, value=600, step=50)
+    fig_width = st.sidebar.slider('Figure Width', min_value=400, max_value=1200, value=1000, step=50)
+    fig_height = st.sidebar.slider('Figure Height', min_value=400, max_value=1000, value=800, step=50)
     interactive_keywords = st.sidebar.radio('Keyword-Matched Pathways Interactive?', ('Yes', 'No'))
     fig, keyword_df = update_plot(keywords, logic, width=fig_width, height=fig_height, interactive=(interactive_keywords == 'Yes'))
-    st.plotly_chart(fig)
+    st.plotly_chart(fig, use_container_width=True)
 
     if interactive_keywords == 'No' and not keyword_df.empty:
         st.write("### Keyword-Matched Pathways")
