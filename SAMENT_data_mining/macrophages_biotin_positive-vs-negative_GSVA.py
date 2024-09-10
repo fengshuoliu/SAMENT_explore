@@ -13,10 +13,16 @@ import os
 # Load the data (Cached for performance)
 @st.cache_data
 def load_data():
-    file_path = 'macrophages_biotin_positive-vs-negative_GSVA.csv'  # Adjust the file path as needed
+    # Get the absolute path of the current file (macrophages_biotin_positive-vs-negative_GSVA.py)
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    
+    # Construct the absolute path to the CSV file
+    file_path = os.path.join(dir_path, 'macrophages_biotin_positive-vs-negative_GSVA.csv')
+    
     if not os.path.exists(file_path):
         st.error(f"File {file_path} not found. Please check the file path.")
         return None
+    
     df = pd.read_csv(file_path)
     df = df.set_index(df.columns[0])
     df.index = df.index.str.strip()  # Remove leading/trailing spaces from pathway names
@@ -26,6 +32,8 @@ def load_data():
 df = load_data()
 
 if df is not None:
+    # (Continue with the rest of your code here...)
+
     # Define a function to categorize pathways based on keywords and logic (AND/OR)
     def get_category(row, keywords=[], logic='AND'):
         pathway_name = row.name.replace('_', ' ').upper()
