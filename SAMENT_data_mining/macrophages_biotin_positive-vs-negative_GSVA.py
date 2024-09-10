@@ -131,7 +131,7 @@ def update_plot(keywords=[], logic='AND', width=800, height=600, interactive=Tru
     ))
 
     # Plot keyword matching pathways
-    keyword_df = df[df['category'] == 'keyword_match']
+    keyword_df = df[df['category'] == 'keyword_match'].sort_values('P.Value')  # Sort by P.Value
     
     if interactive:
         # Interactive: Show name on hover
@@ -154,24 +154,25 @@ def update_plot(keywords=[], logic='AND', width=800, height=600, interactive=Tru
         ))
     else:
         # Non-interactive: Always show name
-        fig.add_trace(go.Scatter(
-            x=keyword_df['GSVA_score'], 
-            y=keyword_df['-log10(adj.P.Val)'], 
-            mode='text+markers',
-            marker=dict(
-                size=15,  # Dot size for keyword-matching pathways
-                color=palette['keyword_match'],  # Green color for keyword-matching pathways
-                opacity=0.8,  # Set transparency
-                line=dict(
-                    width=0.5,  # Set border thickness
-                    color='black'  # Set border color
-                )
-            ),
-            text=[name for name in keyword_df.index],  # Non-interactive: show name always
-            hoverinfo='text',
-            name='Keyword Matched Pathways'
-        ))
-
+        for i, (index, row) in enumerate(keyword_df.iterrows()):
+            fig.add_trace(go.Scatter(
+                x=[row['GSVA_score']], 
+                y=[row['-log10(adj.P.Val)']], 
+                mode='text+markers',
+                marker=dict(
+                    size=15,  # Dot size for keyword-matching pathways
+                    color=palette['keyword_match'],  # Green color for keyword-matching pathways
+                    opacity=0.8,  # Set transparency
+                    line=dict(
+                        width=0.5,  # Set border thickness
+                        color='black'  # Set border color
+                    )
+                ),
+                text=f"{i+1}",  # Number the pathway
+                hoverinfo='text',
+                name=f"Keyword Matched Pathways {i+1}"
+            ))
+    
     # Set layout with transparent background and white plot background
     fig.update_layout(
         paper_bgcolor='rgba(0,0,0,0)',  # Transparent background
@@ -185,7 +186,7 @@ def update_plot(keywords=[], logic='AND', width=800, height=600, interactive=Tru
         legend_title_text='Pathway Categories'  # Custom legend title
     )
 
-    return fig
+    return fig, keyword_df
 
 if df is not None:
     # Sidebar input for keywords and logic
@@ -209,8 +210,14 @@ if df is not None:
     interactive_keywords = st.sidebar.radio('Keyword-Matched Pathways Interactive?', ('Yes', 'No'))
 
     # Show plot in Streamlit app
-    fig = update_plot(keywords, logic, width=fig_width, height=fig_height, interactive=(interactive_keywords == 'Yes'))
+    fig, keyword_df = update_plot(keywords, logic, width=fig_width, height=fig_height, interactive=(interactive_keywords == 'Yes'))
+
     st.plotly_chart(fig)
+
+    if interactive_keywords == 'No' and not keyword_df.empty:
+        # Show a table of the keyword-matched pathways sorted by P.Value
+        st.write("### Keyword-Matched Pathways")
+        st.dataframe(keyword_df[['P.Value']].reset_index().rename(columns={'index': 'Pathway'}))
 
     # Display search info
     st.write(f"Keywords used: {keywords}")
