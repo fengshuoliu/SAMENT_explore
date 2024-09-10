@@ -88,10 +88,11 @@ def update_plot(keywords=[], logic='AND', width='100%', height=800, interactive=
     else:
         # Plot numbered keyword-matched pathways
         for i, (index, row) in enumerate(keyword_df.iterrows()):
+            showlegend = i == 0  # Only show legend for the first trace
             fig.add_trace(go.Scatter(x=[row['GSVA_score']], y=[row['-log10(adj.P.Val)']], mode='text+markers',
                                      marker=dict(size=15, color=palette['keyword_match'], opacity=0.8, line=dict(width=0.5, color='black')),
                                      text=f"<b style='color:black;'>{i+1}</b>",  # Bold and black color for numbers
-                                     hoverinfo='text', name=f"{', '.join(keywords)}"))
+                                     hoverinfo='text', name=f"{', '.join(keywords)}" if showlegend else None, showlegend=showlegend))
 
     # Set layout
     fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(255,255,255,1)', title='Interactive Volcano Plot',
