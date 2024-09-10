@@ -84,14 +84,14 @@ def update_plot(keywords=[], logic='AND', width='100%', height=800, interactive=
         # Plot keyword-matched pathways interactively
         fig.add_trace(go.Scatter(x=keyword_df['GSVA_score'], y=keyword_df['-log10(adj.P.Val)'], mode='markers',
                                  marker=dict(size=15, color=palette['keyword_match'], opacity=0.8, line=dict(width=0.5, color='black')),
-                                 text=[f'<span style="color:{palette["keyword_match"]};">{name}</span>' for name in keyword_df.index], hoverinfo='text', name='Keyword Matched Pathways'))
+                                 text=[f'<span style="color:{palette["keyword_match"]};">{name}</span>' for name in keyword_df.index], hoverinfo='text', name=', '.join(keywords)))
     else:
         # Plot numbered keyword-matched pathways
         for i, (index, row) in enumerate(keyword_df.iterrows()):
             fig.add_trace(go.Scatter(x=[row['GSVA_score']], y=[row['-log10(adj.P.Val)']], mode='text+markers',
                                      marker=dict(size=15, color=palette['keyword_match'], opacity=0.8, line=dict(width=0.5, color='black')),
                                      text=f"<b style='color:black;'>{i+1}</b>",  # Bold and black color for numbers
-                                     hoverinfo='text', name=f"Keyword Matched Pathways {i+1}"))
+                                     hoverinfo='text', name=f"{', '.join(keywords)}"))
 
     # Set layout
     fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(255,255,255,1)', title='Interactive Volcano Plot',
