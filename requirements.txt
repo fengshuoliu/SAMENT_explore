@@ -3,4 +3,4 @@ plotly==5.9.0
 pandas==1.5.3
 numpy==1.26.1
 Pillow==10.0.0
-
+kaleido
