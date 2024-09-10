@@ -7,8 +7,7 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import os
-from io import BytesIO
-from PIL import Image
+from plotly.io import to_image
 
 # Load the data (Cached for performance)
 @st.cache_data
@@ -56,7 +55,7 @@ def get_category(row, keywords=[], logic='AND'):
         return 'non-significant'
 
 # Function to update the plot based on keyword input
-def update_plot(keywords=[], logic='AND', width=800, height=600, show_keyword_names=True):
+def update_plot(keywords=[], logic='AND', width=800, height=600, interactive=True):
     # Apply category based on keyword search
     df['category'] = df.apply(get_category, axis=1, keywords=keywords, logic=logic)
     
@@ -86,7 +85,7 @@ def update_plot(keywords=[], logic='AND', width=800, height=600, show_keyword_na
                 color='black'  # Set border color
             )
         ),
-        text=[name for name in non_significant_df.index],  # Always show pathway names
+        text=[name for name in non_significant_df.index],  # Always interactive
         hoverinfo='text',
         name='Non-Significant'
     ))
@@ -106,7 +105,7 @@ def update_plot(keywords=[], logic='AND', width=800, height=600, show_keyword_na
                 color='black'  # Set border color
             )
         ),
-        text=[name for name in upregulated_df.index],  # Always show pathway names
+        text=[name for name in upregulated_df.index],  # Always interactive
         hoverinfo='text',
         name='Upregulated'
     ))
@@ -126,31 +125,52 @@ def update_plot(keywords=[], logic='AND', width=800, height=600, show_keyword_na
                 color='black'  # Set border color
             )
         ),
-        text=[name for name in downregulated_df.index],  # Always show pathway names
+        text=[name for name in downregulated_df.index],  # Always interactive
         hoverinfo='text',
         name='Downregulated'
     ))
 
-    # Plot keyword matching pathways on top, showing names directly
+    # Plot keyword matching pathways
     keyword_df = df[df['category'] == 'keyword_match']
-    fig.add_trace(go.Scatter(
-        x=keyword_df['GSVA_score'], 
-        y=keyword_df['-log10(adj.P.Val)'], 
-        mode='markers+text',
-        marker=dict(
-            size=15,  # Dot size for keyword-matching pathways
-            color=palette['keyword_match'],  # Green color for keyword-matching pathways
-            opacity=0.8,  # Set transparency
-            line=dict(
-                width=0.5,  # Set border thickness
-                color='black'  # Set border color
-            )
-        ),
-        text=[name if show_keyword_names else '' for name in keyword_df.index],  # Show pathway names directly if selected
-        textposition='top center',  # Position names above the markers
-        hoverinfo='text',
-        name='Keyword Matched Pathways'
-    ))
+    
+    if interactive:
+        # Interactive: Show name on hover
+        fig.add_trace(go.Scatter(
+            x=keyword_df['GSVA_score'], 
+            y=keyword_df['-log10(adj.P.Val)'], 
+            mode='markers',
+            marker=dict(
+                size=15,  # Dot size for keyword-matching pathways
+                color=palette['keyword_match'],  # Green color for keyword-matching pathways
+                opacity=0.8,  # Set transparency
+                line=dict(
+                    width=0.5,  # Set border thickness
+                    color='black'  # Set border color
+                )
+            ),
+            text=[name for name in keyword_df.index],  # Interactive: show name on hover
+            hoverinfo='text',
+            name='Keyword Matched Pathways'
+        ))
+    else:
+        # Non-interactive: Always show name
+        fig.add_trace(go.Scatter(
+            x=keyword_df['GSVA_score'], 
+            y=keyword_df['-log10(adj.P.Val)'], 
+            mode='text+markers',
+            marker=dict(
+                size=15,  # Dot size for keyword-matching pathways
+                color=palette['keyword_match'],  # Green color for keyword-matching pathways
+                opacity=0.8,  # Set transparency
+                line=dict(
+                    width=0.5,  # Set border thickness
+                    color='black'  # Set border color
+                )
+            ),
+            text=[name for name in keyword_df.index],  # Non-interactive: show name always
+            hoverinfo='text',
+            name='Keyword Matched Pathways'
+        ))
 
     # Set layout with transparent background and white plot background
     fig.update_layout(
@@ -166,13 +186,6 @@ def update_plot(keywords=[], logic='AND', width=800, height=600, show_keyword_na
     )
 
     return fig
-
-# Function to download the plot as PNG or PDF
-def save_plot_as_image(fig, format='PNG'):
-    buf = BytesIO()
-    fig.write_image(buf, format=format, scale=3)  # Save image at 300 DPI by increasing scale
-    buf.seek(0)
-    return buf
 
 if df is not None:
     # Sidebar input for keywords and logic
@@ -192,27 +205,27 @@ if df is not None:
     fig_width = st.sidebar.slider('Figure Width', min_value=400, max_value=1200, value=800, step=50)
     fig_height = st.sidebar.slider('Figure Height', min_value=400, max_value=1000, value=600, step=50)
 
-    # Allow user to toggle pathway names for keyword matches
-    show_keyword_names = st.sidebar.checkbox('Show Names for Keyword-Matched Pathways', value=True)
+    # Allow user to toggle interactive mode for keyword-matched pathways
+    interactive_keywords = st.sidebar.radio('Keyword-Matched Pathways Interactive?', ('Yes', 'No'))
 
     # Show plot in Streamlit app
-    fig = update_plot(keywords, logic, width=fig_width, height=fig_height, show_keyword_names=show_keyword_names)
+    fig = update_plot(keywords, logic, width=fig_width, height=fig_height, interactive=(interactive_keywords == 'Yes'))
     st.plotly_chart(fig)
 
     # Display search info
     st.write(f"Keywords used: {keywords}")
     st.write(f"Logic used: {logic}")
     st.write(f"Figure size: {fig_width} x {fig_height}")
-    st.write(f"Show names for keyword-matched pathways: {show_keyword_names}")
+    st.write(f"Keyword-Matched Pathways Interactive: {interactive_keywords}")
 
-    # Add download options for PNG or PDF
+    # Allow user to download the plot as PNG or PDF
     st.sidebar.header('Download Plot')
-    file_format = st.sidebar.selectbox('Select File Format', ['PNG', 'PDF'])
-    if st.sidebar.button(f'Download as {file_format}'):
-        buf = save_plot_as_image(fig, format=file_format)
-        st.sidebar.download_button(
-            label=f'Download {file_format}',
-            data=buf,
-            file_name=f"volcano_plot.{file_format.lower()}",
-            mime=f"image/{file_format.lower()}"
-        )
+    download_format = st.sidebar.radio('Download Format', ('PNG', 'PDF'))
+
+    if st.sidebar.button('Download'):
+        if download_format == 'PNG':
+            file_bytes = to_image(fig, format='png', engine="kaleido", scale=3)  # 300 DPI
+            st.sidebar.download_button(label='Download as PNG', data=file_bytes, file_name='plot.png', mime='image/png')
+        elif download_format == 'PDF':
+            file_bytes = to_image(fig, format='pdf', engine="kaleido", scale=3)  # 300 DPI
+            st.sidebar.download_button(label='Download as PDF', data=file_bytes, file_name='plot.pdf', mime='application/pdf')
