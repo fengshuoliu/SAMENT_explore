@@ -2,7 +2,6 @@
 # coding: utf-8
 
 # In[3]:
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -55,7 +54,7 @@ def get_category(row, keywords=[], logic='AND'):
         return 'non-significant'
 
 # Function to update the plot based on keyword input
-def update_plot(keywords=[], logic='AND', width=800, height=600, show_pathway_names=True):
+def update_plot(keywords=[], logic='AND', width=800, height=600, show_keyword_names=True):
     # Apply category based on keyword search
     df['category'] = df.apply(get_category, axis=1, keywords=keywords, logic=logic)
     
@@ -85,7 +84,7 @@ def update_plot(keywords=[], logic='AND', width=800, height=600, show_pathway_na
                 color='black'  # Set border color
             )
         ),
-        text=[name if show_pathway_names else '' for name in non_significant_df.index],  # Toggle pathway names
+        text=[name for name in non_significant_df.index],  # Always show pathway names
         hoverinfo='text',
         name='Non-Significant'
     ))
@@ -105,7 +104,7 @@ def update_plot(keywords=[], logic='AND', width=800, height=600, show_pathway_na
                 color='black'  # Set border color
             )
         ),
-        text=[name if show_pathway_names else '' for name in upregulated_df.index],  # Toggle pathway names
+        text=[name for name in upregulated_df.index],  # Always show pathway names
         hoverinfo='text',
         name='Upregulated'
     ))
@@ -125,7 +124,7 @@ def update_plot(keywords=[], logic='AND', width=800, height=600, show_pathway_na
                 color='black'  # Set border color
             )
         ),
-        text=[name if show_pathway_names else '' for name in downregulated_df.index],  # Toggle pathway names
+        text=[name for name in downregulated_df.index],  # Always show pathway names
         hoverinfo='text',
         name='Downregulated'
     ))
@@ -145,7 +144,7 @@ def update_plot(keywords=[], logic='AND', width=800, height=600, show_pathway_na
                 color='black'  # Set border color
             )
         ),
-        text=[name if show_pathway_names else '' for name in keyword_df.index],  # Toggle pathway names
+        text=[name if show_keyword_names else '' for name in keyword_df.index],  # Toggle keyword-matched pathway names
         hoverinfo='text',
         name='Keyword Matched Pathways'
     ))
@@ -183,14 +182,14 @@ if df is not None:
     fig_width = st.sidebar.slider('Figure Width', min_value=400, max_value=1200, value=800, step=50)
     fig_height = st.sidebar.slider('Figure Height', min_value=400, max_value=1000, value=600, step=50)
 
-    # Allow user to toggle pathway names on or off
-    show_pathway_names = st.sidebar.checkbox('Show Pathway Names', value=True)
+    # Allow user to toggle pathway names for keyword matches
+    show_keyword_names = st.sidebar.checkbox('Show Names for Keyword-Matched Pathways', value=True)
 
     # Show plot in Streamlit app
-    st.plotly_chart(update_plot(keywords, logic, width=fig_width, height=fig_height, show_pathway_names=show_pathway_names))
+    st.plotly_chart(update_plot(keywords, logic, width=fig_width, height=fig_height, show_keyword_names=show_keyword_names))
 
     # Display search info
     st.write(f"Keywords used: {keywords}")
     st.write(f"Logic used: {logic}")
     st.write(f"Figure size: {fig_width} x {fig_height}")
-    st.write(f"Show pathway names: {show_pathway_names}")
+    st.write(f"Show names for keyword-matched pathways: {show_keyword_names}")
