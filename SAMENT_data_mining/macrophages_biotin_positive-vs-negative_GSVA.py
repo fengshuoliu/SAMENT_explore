@@ -7,6 +7,8 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import os
+from io import BytesIO
+from PIL import Image
 
 # Load the data (Cached for performance)
 @st.cache_data
@@ -129,12 +131,12 @@ def update_plot(keywords=[], logic='AND', width=800, height=600, show_keyword_na
         name='Downregulated'
     ))
 
-    # Plot keyword matching pathways on top
+    # Plot keyword matching pathways on top, showing names directly
     keyword_df = df[df['category'] == 'keyword_match']
     fig.add_trace(go.Scatter(
         x=keyword_df['GSVA_score'], 
         y=keyword_df['-log10(adj.P.Val)'], 
-        mode='markers',
+        mode='markers+text',
         marker=dict(
             size=15,  # Dot size for keyword-matching pathways
             color=palette['keyword_match'],  # Green color for keyword-matching pathways
@@ -144,7 +146,8 @@ def update_plot(keywords=[], logic='AND', width=800, height=600, show_keyword_na
                 color='black'  # Set border color
             )
         ),
-        text=[name if show_keyword_names else '' for name in keyword_df.index],  # Toggle keyword-matched pathway names
+        text=[name if show_keyword_names else '' for name in keyword_df.index],  # Show pathway names directly if selected
+        textposition='top center',  # Position names above the markers
         hoverinfo='text',
         name='Keyword Matched Pathways'
     ))
@@ -163,6 +166,13 @@ def update_plot(keywords=[], logic='AND', width=800, height=600, show_keyword_na
     )
 
     return fig
+
+# Function to download the plot as PNG or PDF
+def save_plot_as_image(fig, format='PNG'):
+    buf = BytesIO()
+    fig.write_image(buf, format=format, scale=3)  # Save image at 300 DPI by increasing scale
+    buf.seek(0)
+    return buf
 
 if df is not None:
     # Sidebar input for keywords and logic
@@ -186,10 +196,23 @@ if df is not None:
     show_keyword_names = st.sidebar.checkbox('Show Names for Keyword-Matched Pathways', value=True)
 
     # Show plot in Streamlit app
-    st.plotly_chart(update_plot(keywords, logic, width=fig_width, height=fig_height, show_keyword_names=show_keyword_names))
+    fig = update_plot(keywords, logic, width=fig_width, height=fig_height, show_keyword_names=show_keyword_names)
+    st.plotly_chart(fig)
 
     # Display search info
     st.write(f"Keywords used: {keywords}")
     st.write(f"Logic used: {logic}")
     st.write(f"Figure size: {fig_width} x {fig_height}")
     st.write(f"Show names for keyword-matched pathways: {show_keyword_names}")
+
+    # Add download options for PNG or PDF
+    st.sidebar.header('Download Plot')
+    file_format = st.sidebar.selectbox('Select File Format', ['PNG', 'PDF'])
+    if st.sidebar.button(f'Download as {file_format}'):
+        buf = save_plot_as_image(fig, format=file_format)
+        st.sidebar.download_button(
+            label=f'Download {file_format}',
+            data=buf,
+            file_name=f"volcano_plot.{file_format.lower()}",
+            mime=f"image/{file_format.lower()}"
+        )
