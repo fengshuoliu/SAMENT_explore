@@ -7,19 +7,14 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import os
-from plotly.io import to_image
-
-# Check if kaleido is installed for image export
-try:
-    import kaleido
-    kaleido_available = True
-except ImportError:
-    kaleido_available = False
 
 # Load the data (Cached for performance)
 @st.cache_data
 def load_data():
+    # Get the absolute path of the current file (macrophages_biotin_positive-vs-negative_GSVA.py)
     dir_path = os.path.dirname(os.path.realpath(__file__))
+    
+    # Construct the absolute path to the CSV file
     file_path = os.path.join(dir_path, 'macrophages_biotin_positive-vs-negative_GSVA.csv')
     
     if not os.path.exists(file_path):
@@ -28,116 +23,179 @@ def load_data():
     
     df = pd.read_csv(file_path)
     df = df.set_index(df.columns[0])
-    df.index = df.index.str.strip()
+    df.index = df.index.str.strip()  # Remove leading/trailing spaces from pathway names
     df['-log10(adj.P.Val)'] = -np.log10(df['P.Value'])
     return df
 
 df = load_data()
 
-# Function to categorize pathways
-def get_category(row, keywords=[], logic='AND'):
-    pathway_name = row.name.replace('_', ' ').upper()
-    keywords = [kw.upper().strip() for kw in keywords if kw.strip() != '']
-    
-    if logic == 'AND':
-        if all(keyword in pathway_name for keyword in keywords):
-            return 'keyword_match'
-    elif logic == 'OR':
-        if any(keyword in pathway_name for keyword in keywords):
-            return 'keyword_match'
-    
-    if row['GSVA_score'] > 0.5 and row['-log10(adj.P.Val)'] > -np.log10(0.05):
-        return 'upregulated'
-    elif row['GSVA_score'] < -0.5 and row['-log10(adj.P.Val)'] > -np.log10(0.05):
-        return 'downregulated'
-    else:
-        return 'non-significant'
-
-# Function to update the plot
-def update_plot(keywords=[], logic='AND', width='100%', height=800, interactive=True):
-    df['category'] = df.apply(get_category, axis=1, keywords=keywords, logic=logic)
-    palette = {'keyword_match': '#32CD32', 'upregulated': '#FF6347', 'downregulated': '#1E90FF', 'non-significant': '#A9A9A9'}
-    fig = go.Figure()
-    
-    # Plot non-significant pathways
-    non_significant_df = df[df['category'] == 'non-significant']
-    fig.add_trace(go.Scatter(x=non_significant_df['GSVA_score'], y=non_significant_df['-log10(adj.P.Val)'], mode='markers',
-                             marker=dict(size=8, color=palette['non-significant'], opacity=0.8, line=dict(width=0.5, color='black')),
-                             text=[name for name in non_significant_df.index], hoverinfo='text', name='Non-Significant'))
-    
-    # Plot upregulated pathways
-    upregulated_df = df[df['category'] == 'upregulated']
-    fig.add_trace(go.Scatter(x=upregulated_df['GSVA_score'], y=upregulated_df['-log10(adj.P.Val)'], mode='markers',
-                             marker=dict(size=8, color=palette['upregulated'], opacity=0.8, line=dict(width=0.5, color='black')),
-                             text=[f'<span style="color:{palette["upregulated"]};">{name}</span>' for name in upregulated_df.index], hoverinfo='text', name='Upregulated'))
-
-    # Plot downregulated pathways
-    downregulated_df = df[df['category'] == 'downregulated']
-    fig.add_trace(go.Scatter(x=downregulated_df['GSVA_score'], y=downregulated_df['-log10(adj.P.Val)'], mode='markers',
-                             marker=dict(size=8, color=palette['downregulated'], opacity=0.8, line=dict(width=0.5, color='black')),
-                             text=[f'<span style="color:{palette["downregulated"]};">{name}</span>' for name in downregulated_df.index], hoverinfo='text', name='Downregulated'))
-    
-    # Sort keyword-matched pathways by P.Value
-    keyword_df = df[df['category'] == 'keyword_match'].sort_values('P.Value')
-    
-    if interactive:
-        # Plot keyword-matched pathways interactively
-        fig.add_trace(go.Scatter(x=keyword_df['GSVA_score'], y=keyword_df['-log10(adj.P.Val)'], mode='markers',
-                                 marker=dict(size=15, color=palette['keyword_match'], opacity=0.8, line=dict(width=0.5, color='black')),
-                                 text=[f'<span style="color:{palette["keyword_match"]};">{name}</span>' for name in keyword_df.index], hoverinfo='text', name='Keyword Matched Pathways'))
-    else:
-        # Plot numbered keyword-matched pathways
-        for i, (index, row) in enumerate(keyword_df.iterrows()):
-            fig.add_trace(go.Scatter(x=[row['GSVA_score']], y=[row['-log10(adj.P.Val)']], mode='text+markers',
-                                     marker=dict(size=15, color=palette['keyword_match'], opacity=0.8, line=dict(width=0.5, color='black')),
-                                     text=f"<b style='color:black;'>{i+1}</b>",  # Bold and black color for numbers
-                                     hoverinfo='text', name=f"Keyword Matched Pathways {i+1}"))
-
-    # Set layout
-    fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(255,255,255,1)', title='Interactive Volcano Plot',
-                      xaxis_title='GSVA Score', yaxis_title='-log10(adj.P.Val)', title_font_size=18, width=width, height=height,
-                      legend_title_text='Pathway Categories', autosize=True)
-    
-    return fig, keyword_df
-
 if df is not None:
+    # Define a function to categorize pathways based on keywords and logic (AND/OR)
+    def get_category(row, keywords=[], logic='AND'):
+        pathway_name = row.name.replace('_', ' ').upper()
+        
+        # Ensure keywords are processed correctly (uppercased and stripped)
+        keywords = [kw.upper().strip() for kw in keywords if kw.strip() != '']
+        
+        if logic == 'AND':
+            # All keywords must be present in the pathway name
+            if all(keyword in pathway_name for keyword in keywords):
+                return 'keyword_match'
+        elif logic == 'OR':
+            # Any keyword must be present in the pathway name
+            if any(keyword in pathway_name for keyword in keywords):
+                return 'keyword_match'
+
+        # Default logic for significance and GSVA score
+        if row['GSVA_score'] > 0.5 and row['-log10(adj.P.Val)'] > -np.log10(0.05):
+            return 'upregulated'
+        elif row['GSVA_score'] < -0.5 and row['-log10(adj.P.Val)'] > -np.log10(0.05):
+            return 'downregulated'
+        else:
+            return 'non-significant'
+
+    # Function to update the plot based on keyword input
+    def update_plot(keywords=[], logic='AND', show_pathway_names=True, width=800, height=600):
+        # Apply category based on keyword search
+        df['category'] = df.apply(get_category, axis=1, keywords=keywords, logic=logic)
+        
+        # Define color palette
+        palette = {
+            'keyword_match': '#32CD32',  # Green for pathways matching the search
+            'upregulated': '#FF6347',  # Red for upregulated pathways
+            'downregulated': '#1E90FF',  # Blue for downregulated pathways
+            'non-significant': '#A9A9A9'  # Grey for non-significant pathways
+        }
+
+        # Create figure object
+        fig = go.Figure()
+
+        # Plot non-significant pathways
+        non_significant_df = df[df['category'] == 'non-significant']
+        fig.add_trace(go.Scatter(
+            x=non_significant_df['GSVA_score'], 
+            y=non_significant_df['-log10(adj.P.Val)'], 
+            mode='markers',
+            marker=dict(
+                size=8,  # Dot size for other pathways
+                color=palette['non-significant'],  # Grey color for non-significant pathways
+                opacity=0.8,  # Set transparency
+                line=dict(
+                    width=0.5,  # Set border thickness
+                    color='black'  # Set border color
+                )
+            ),
+            text=[f'<span style="color:{palette["non-significant"]};">{name}</span>' for name in non_significant_df.index],  # Hover text with pathway names
+            hoverinfo='text',
+            name='Non-Significant'
+        ))
+
+        # Plot upregulated pathways
+        upregulated_df = df[df['category'] == 'upregulated']
+        fig.add_trace(go.Scatter(
+            x=upregulated_df['GSVA_score'], 
+            y=upregulated_df['-log10(adj.P.Val)'], 
+            mode='markers',
+            marker=dict(
+                size=8,  # Dot size for upregulated pathways
+                color=palette['upregulated'],  # Red color for upregulated pathways
+                opacity=0.8,  # Set transparency
+                line=dict(
+                    width=0.5,  # Set border thickness
+                    color='black'  # Set border color
+                )
+            ),
+            text=[f'<span style="color:{palette["upregulated"]};">{name}</span>' for name in upregulated_df.index],  # Hover text with pathway names
+            hoverinfo='text',
+            name='Upregulated'
+        ))
+
+        # Plot downregulated pathways
+        downregulated_df = df[df['category'] == 'downregulated']
+        fig.add_trace(go.Scatter(
+            x=downregulated_df['GSVA_score'], 
+            y=downregulated_df['-log10(adj.P.Val)'], 
+            mode='markers',
+            marker=dict(
+                size=8,  # Dot size for downregulated pathways
+                color=palette['downregulated'],  # Blue color for downregulated pathways
+                opacity=0.8,  # Set transparency
+                line=dict(
+                    width=0.5,  # Set border thickness
+                    color='black'  # Set border color
+                )
+            ),
+            text=[f'<span style="color:{palette["downregulated"]};">{name}</span>' for name in downregulated_df.index],  # Hover text with pathway names
+            hoverinfo='text',
+            name='Downregulated'
+        ))
+
+        # Plot keyword matching pathways on top, with numbers and actual pathway names in legend
+        keyword_df = df[df['category'] == 'keyword_match']
+        for i, (index, row) in enumerate(keyword_df.iterrows(), start=1):
+            pathway_name = index
+            fig.add_trace(go.Scatter(
+                x=[row['GSVA_score']], 
+                y=[row['-log10(adj.P.Val)']], 
+                mode='markers+text',
+                marker=dict(
+                    size=15,  # Dot size for keyword-matching pathways
+                    color=palette['keyword_match'],  # Green color for keyword-matching pathways
+                    opacity=0.8,  # Set transparency
+                    line=dict(
+                        width=0.5,  # Set border thickness
+                        color='black'  # Set border color
+                    )
+                ),
+                text=[str(i)],  # Number on green dots
+                textposition="top center",
+                hoverinfo='text',
+                name=f'{i}. {pathway_name}'  # Show pathway names in legend
+            ))
+
+        # Set layout with transparent background and white plot background
+        fig.update_layout(
+            paper_bgcolor='rgba(0,0,0,0)',  # Transparent background
+            plot_bgcolor='rgba(255,255,255,1)',  # White plot background
+            title='Interactive Volcano Plot with Keyword Search',
+            xaxis_title='GSVA Score',
+            yaxis_title='-log10(adj.P.Val)',
+            title_font_size=18,
+            width=width,  # Custom width for figure size
+            height=height,  # Custom height for figure size
+            legend_title_text='Pathway Categories'  # Custom legend title
+        )
+
+        return fig
+
     # Sidebar input for keywords and logic
     st.sidebar.header('Search Parameters')
     num_keywords = st.sidebar.number_input('Number of Keywords', min_value=1, max_value=10, value=2)
+
+    # Gather keywords dynamically in the sidebar
     keywords = [st.sidebar.text_input(f'Keyword {i+1}') for i in range(num_keywords)]
+
+    # Allow user to select logic (AND or OR)
     logic = st.sidebar.selectbox('Logic', ['AND', 'OR'])
+
+    # Filter out empty keywords
     keywords = [kw for kw in keywords if kw.strip() != '']
-    fig_width = st.sidebar.slider('Figure Width', min_value=400, max_value=1200, value=1000, step=50)
-    fig_height = st.sidebar.slider('Figure Height', min_value=400, max_value=1000, value=800, step=50)
-    interactive_keywords = st.sidebar.radio('Keyword-Matched Pathways Interactive?', ('Yes', 'No'))
-    
-    # Update plot based on user input
-    fig, keyword_df = update_plot(keywords, logic, width=fig_width, height=fig_height, interactive=(interactive_keywords == 'Yes'))
-    
-    # Display plot
-    st.plotly_chart(fig, use_container_width=True)
 
-    # Display the table for keyword-matched pathways if interactive is set to No
-    if interactive_keywords == 'No' and not keyword_df.empty:
-        st.write("### Keyword-Matched Pathways")
-        st.dataframe(keyword_df[['P.Value']].reset_index().rename(columns={'index': 'Pathway'}))
+    # Toggle to show pathway names directly or on hover
+    show_pathway_names = st.sidebar.radio(
+        'Show pathway names for keyword-matched pathways:',
+        ('Yes', 'No')
+    )
 
+    # Allow user to adjust figure size
+    fig_width = st.sidebar.slider('Figure Width', min_value=400, max_value=1200, value=800, step=50)
+    fig_height = st.sidebar.slider('Figure Height', min_value=400, max_value=1000, value=600, step=50)
+
+    # Show plot in Streamlit app
+    fig = update_plot(keywords, logic, show_pathway_names=(show_pathway_names == 'No'), width=fig_width, height=fig_height)
+    st.plotly_chart(fig)
+
+    # Display search info
     st.write(f"Keywords used: {keywords}")
     st.write(f"Logic used: {logic}")
     st.write(f"Figure size: {fig_width} x {fig_height}")
-    st.write(f"Keyword-Matched Pathways Interactive: {interactive_keywords}")
-
-    # Download plot as PNG or PDF
-    st.sidebar.header('Download Plot')
-    download_format = st.sidebar.radio('Download Format', ('PNG', 'PDF'))
-    
-    if st.sidebar.button('Download'):
-        if kaleido_available:
-            if download_format == 'PNG':
-                file_bytes = to_image(fig, format='png', engine="kaleido", scale=3)  # 300 DPI
-                st.sidebar.download_button(label='Download as PNG', data=file_bytes, file_name='plot.png', mime='image/png')
-            elif download_format == 'PDF':
-                file_bytes = to_image(fig, format='pdf', engine="kaleido", scale=3)  # 300 DPI
-                st.sidebar.download_button(label='Download as PDF', data=file_bytes, file_name='plot.pdf', mime='application/pdf')
-        else:
-            st.sidebar.error("Image export requires the 'kaleido' package. Please install it by adding 'kaleido' to your requirements.txt file.")
