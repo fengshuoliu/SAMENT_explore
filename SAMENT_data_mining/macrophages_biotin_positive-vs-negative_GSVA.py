@@ -65,17 +65,17 @@ def update_plot(keywords=[], logic='AND', width='100%', height=800, interactive=
                              marker=dict(size=8, color=palette['non-significant'], opacity=0.8, line=dict(width=0.5, color='black')),
                              text=[name for name in non_significant_df.index], hoverinfo='text', name='Non-Significant'))
     
-    # Plot upregulated pathways
+    # Plot up-regulated pathways
     upregulated_df = df[df['category'] == 'upregulated']
     fig.add_trace(go.Scatter(x=upregulated_df['GSVA_score'], y=upregulated_df['-log10(adj.P.Val)'], mode='markers',
                              marker=dict(size=8, color=palette['upregulated'], opacity=0.8, line=dict(width=0.5, color='black')),
-                             text=[f'<span style="color:{palette["upregulated"]};">{name}</span>' for name in upregulated_df.index], hoverinfo='text', name='Upregulated'))
+                             text=[f'<span style="color:{palette["upregulated"]};">{name}</span>' for name in upregulated_df.index], hoverinfo='text', name='Up-regulated'))
 
-    # Plot downregulated pathways
+    # Plot down-regulated pathways
     downregulated_df = df[df['category'] == 'downregulated']
     fig.add_trace(go.Scatter(x=downregulated_df['GSVA_score'], y=downregulated_df['-log10(adj.P.Val)'], mode='markers',
                              marker=dict(size=8, color=palette['downregulated'], opacity=0.8, line=dict(width=0.5, color='black')),
-                             text=[f'<span style="color:{palette["downregulated"]};">{name}</span>' for name in downregulated_df.index], hoverinfo='text', name='Downregulated'))
+                             text=[f'<span style="color:{palette["downregulated"]};">{name}</span>' for name in downregulated_df.index], hoverinfo='text', name='Down-regulated'))
     
     # Sort keyword-matched pathways by P.Value
     keyword_df = df[df['category'] == 'keyword_match'].sort_values('P.Value')
@@ -95,7 +95,7 @@ def update_plot(keywords=[], logic='AND', width='100%', height=800, interactive=
                                      hoverinfo='text', name=f"{', '.join(keywords)}" if showlegend else None, showlegend=showlegend))
 
     # Set layout
-    fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(255,255,255,1)', title='Interactive Volcano Plot',
+    fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(255,255,255,1)', title='Macrophage: Biotin Positive vs Negative',
                       xaxis_title='GSVA Score', yaxis_title='-log10(adj.P.Val)', title_font_size=18, width=width, height=height,
                       legend_title_text='Pathway Categories', autosize=True)
     
