@@ -240,20 +240,36 @@ if df is not None:
         keyword_df_display.index += 1  # Ensure the table starts numbering from 1
         st.dataframe(keyword_df_display)
                           
-from plotly.io import to_html  # Add this near top of your script
+import re  # make sure this is already imported
+from plotly.io import to_image
 
-# Download plot as HTML (streamlit cloud compatible)
 st.sidebar.header('Download Plot')
+download_format = st.sidebar.radio('Download Format', ('PNG', 'PDF'))
 
-if st.sidebar.button('Download Interactive HTML'):
-    try:
-        html_bytes = to_html(fig, full_html=True).encode('utf-8')
-        st.sidebar.download_button(
-            label='Download as HTML',
-            data=html_bytes,
-            file_name='plot.html',
-            mime='text/html'
-        )
-    except Exception as e:
-        st.sidebar.error("Failed to export plot as HTML.")
-        st.sidebar.text(str(e))
+if st.sidebar.button('Download'):
+    if kaleido_available:
+        try:
+            # Remove HTML tags from fig text for export compatibility
+            for trace in fig.data:
+                if hasattr(trace, "text"):
+                    trace.text = [re.sub(r'<.*?>', '', t) if isinstance(t, str) else "" for t in trace.text]
+
+            # Generate image
+            file_bytes = to_image(fig, format=download_format.lower(), engine="kaleido", scale=3)
+            mime_type = 'image/png' if download_format == 'PNG' else 'application/pdf'
+            file_ext = 'png' if download_format == 'PNG' else 'pdf'
+
+            st.sidebar.download_button(
+                label=f'Download as {file_ext.upper()}',
+                data=file_bytes,
+                file_name=f'plot.{file_ext}',
+                mime=mime_type
+            )
+        except Exception as e:
+            st.sidebar.error("❌ Failed to export image.")
+            st.sidebar.warning("⚠️ Kaleido may require Chrome to be installed on Streamlit Cloud.")
+            st.sidebar.code("pip install plotly && plotly_get_chrome")
+            st.sidebar.text(str(e))
+    else:
+        st.sidebar.error("Kaleido is not installed.")
+        st.sidebar.warning("Install it with:\n\npip install kaleido\nplotly_get_chrome")
