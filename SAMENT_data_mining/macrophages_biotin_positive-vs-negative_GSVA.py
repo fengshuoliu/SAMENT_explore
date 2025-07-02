@@ -240,36 +240,17 @@ if df is not None:
         keyword_df_display.index += 1  # Ensure the table starts numbering from 1
         st.dataframe(keyword_df_display)
                           
-import re  # make sure this is already imported
-from plotly.io import to_image
-
-st.sidebar.header('Download Plot')
-download_format = st.sidebar.radio('Download Format', ('PNG', 'PDF'))
-
-if st.sidebar.button('Download'):
-    if kaleido_available:
-        try:
-            # Remove HTML tags from fig text for export compatibility
-            for trace in fig.data:
-                if hasattr(trace, "text"):
-                    trace.text = [re.sub(r'<.*?>', '', t) if isinstance(t, str) else "" for t in trace.text]
-
-            # Generate image
-            file_bytes = to_image(fig, format=download_format.lower(), engine="kaleido", scale=3)
-            mime_type = 'image/png' if download_format == 'PNG' else 'application/pdf'
-            file_ext = 'png' if download_format == 'PNG' else 'pdf'
-
-            st.sidebar.download_button(
-                label=f'Download as {file_ext.upper()}',
-                data=file_bytes,
-                file_name=f'plot.{file_ext}',
-                mime=mime_type
-            )
-        except Exception as e:
-            st.sidebar.error("❌ Failed to export image.")
-            st.sidebar.warning("⚠️ Kaleido may require Chrome to be installed on Streamlit Cloud.")
-            st.sidebar.code("pip install plotly && plotly_get_chrome")
-            st.sidebar.text(str(e))
-    else:
-        st.sidebar.error("Kaleido is not installed.")
-        st.sidebar.warning("Install it with:\n\npip install kaleido\nplotly_get_chrome")
+# Download plot as PNG or PDF
+    st.sidebar.header('Download Plot')
+    download_format = st.sidebar.radio('Download Format', ('PNG', 'PDF'))
+    
+    if st.sidebar.button('Download'):
+        if kaleido_available:
+            if download_format == 'PNG':
+                file_bytes = to_image(fig, format='png', engine="kaleido", scale=3)  # 300 DPI
+                st.sidebar.download_button(label='Download as PNG', data=file_bytes, file_name='plot.png', mime='image/png')
+            elif download_format == 'PDF':
+                file_bytes = to_image(fig, format='pdf', engine="kaleido", scale=3)  # 300 DPI
+                st.sidebar.download_button(label='Download as PDF', data=file_bytes, file_name='plot.pdf', mime='application/pdf')
+        else:
+            st.sidebar.error("Image export requires the 'kaleido' package. Please install it by adding 'kaleido' to your requirements.txt file.")
