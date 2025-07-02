@@ -242,31 +242,30 @@ if df is not None:
                           
     import re  # <-- Add this near the top of your script
 
-  # Download plot as PNG or PDF
-  st.sidebar.header('Download Plot')
-  download_format = st.sidebar.radio('Download Format', ('PNG', 'PDF'))
+      # Download plot as PNG or PDF
+    st.sidebar.header('Download Plot')
+    download_format = st.sidebar.radio('Download Format', ('PNG', 'PDF'))
 
-  if st.sidebar.button('Download'):
-      if kaleido_available:
-          try:
-              # Remove HTML tags from fig text (Plotly + Kaleido can't render styled text)
-              for trace in fig.data:
-                  if hasattr(trace, "text"):
-                      trace.text = [re.sub(r'<.*?>', '', t) if isinstance(t, str) else "" for t in trace.text]
-  
-              file_bytes = to_image(fig, format=download_format.lower(), engine="kaleido", scale=3)
-              mime_type = 'image/png' if download_format == 'PNG' else 'application/pdf'
-              file_ext = 'png' if download_format == 'PNG' else 'pdf'
-  
-              st.sidebar.download_button(
-                  label=f'Download as {file_ext.upper()}',
-                  data=file_bytes,
-                  file_name=f'plot.{file_ext}',
-                  mime=mime_type
-              )
-          except Exception as e:
-              st.sidebar.error("Failed to export image. Try reducing plot complexity or removing styled text.")
-              st.sidebar.text(str(e))
-      else:
-          st.sidebar.error("Image export requires the 'kaleido' package. Please install it.")
+    if st.sidebar.button('Download'):
+        if kaleido_available:
+            try:
+                # Remove HTML tags from fig text (Plotly + Kaleido can't render styled text)
+                for trace in fig.data:
+                    if hasattr(trace, "text"):
+                        trace.text = [re.sub(r'<.*?>', '', t) if isinstance(t, str) else "" for t in trace.text]
 
+                file_bytes = to_image(fig, format=download_format.lower(), engine="kaleido", scale=3)
+                mime_type = 'image/png' if download_format == 'PNG' else 'application/pdf'
+                file_ext = 'png' if download_format == 'PNG' else 'pdf'
+
+                st.sidebar.download_button(
+                    label=f'Download as {file_ext.upper()}',
+                    data=file_bytes,
+                    file_name=f'plot.{file_ext}',
+                    mime=mime_type
+                )
+            except Exception as e:
+                st.sidebar.error("Failed to export image. Try reducing plot complexity or removing styled text.")
+                st.sidebar.text(str(e))
+        else:
+            st.sidebar.error("Image export requires the 'kaleido' package. Please install it.")
