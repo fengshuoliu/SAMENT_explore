@@ -2,7 +2,7 @@ streamlit
 pandas
 numpy
 #streamlit==1.38.0
-plotly>=5.20.0
+plotly
 #pandas==1.5.3
 #numpy==1.26.1
 Pillow==10.0.0
