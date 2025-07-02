@@ -92,7 +92,8 @@ def update_plot(keywords=[], exclude_keywords=[], logic='AND', neg_cutoff=-0.2, 
     upregulated_df = df[df['category'] == 'upregulated']
     fig.add_trace(go.Scatter(x=upregulated_df['GSVA_score'], y=upregulated_df['-log10(adj.P.Val)'], mode='markers',
                              marker=dict(size=8, color=palette['upregulated'], opacity=0.8, line=dict(width=0.5, color='black')),
-                             text=[name for name in upregulated_df.index]
+                             text=[f'<span style="color:{palette["upregulated"]};">{name}</span>' for name in upregulated_df.index]
+
 
     # Plot down-regulated pathways
     downregulated_df = df[df['category'] == 'downregulated']
