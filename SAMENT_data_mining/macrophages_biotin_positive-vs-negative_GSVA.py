@@ -77,7 +77,9 @@ def wrap_text(text, width=30):
     return '<br>'.join(textwrap.wrap(text, width=width))
 
 # Function to update the plot
-def update_plot(keywords=[], exclude_keywords=[], logic='AND', width='100%', height=800, interactive=True):
+def update_plot(keywords=[], exclude_keywords=[], logic='AND',
+                neg_cutoff=-0.2, pos_cutoff=0.2, significance_cutoff=1.0,
+                width='100%', height=800, interactive=True):
     df['category'] = df.apply(get_category, axis=1, keywords=keywords, exclude_keywords=exclude_keywords, logic=logic)
     palette = {'keyword_match': '#32CD32', 'upregulated': '#FF6347', 'downregulated': '#1E90FF', 'non-significant': '#A9A9A9'}
     fig = go.Figure()
